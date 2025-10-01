@@ -1,0 +1,7 @@
+[core]
+    remote = supabase_s3
+['remote "supabase_s3"']
+    url = s3://callcenterai/data
+    endpointurl = https://cyxoshcglvkfzyzgrgsz.storage.supabase.co/storage/v1/s3
+    access_key_id = 2099a4795fe64172fd9de38424681331
+    secret_access_key = 0b6a2e05949d36dfd686653d8fdafa04d8531bc59c38d086168752ba48164418
