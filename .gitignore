@@ -1,1 +1,4 @@
 .venv/
+ssh-keygen -t ed25519 -C "chouchenanis998@gmail.com"
+.github_cred
+.github_cred.pub
