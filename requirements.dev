@@ -1,0 +1,8 @@
+dvc==3.55.2
+mlflow
+dvc[s3]
+numpy
+pytest
+black
+flake8
+isort
