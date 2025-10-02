@@ -1,0 +1,18 @@
+stages:
+  prepare:
+    cmd: python training/prepare/prepare.py
+    deps:
+    - data/raw
+    - training/prepare/prepare.py
+    outs:
+    - data/processed/test.csv
+    - data/processed/train.csv
+    - data/processed/val.csv
+  train_tfidf:
+    cmd: .venv\Scripts\python.exe training/tfidf/train.py
+    deps:
+    - data/processed/train.csv
+    - data/processed/val.csv
+    - training/tfidf/train.py
+    outs:
+    - artifacts/tfidf/model.joblib

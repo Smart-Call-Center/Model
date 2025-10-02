@@ -7,3 +7,5 @@ black
 flake8
 isort
 scikit-learn
+pandas
+joblib
