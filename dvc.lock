@@ -3,61 +3,93 @@ stages:
   prepare:
     cmd: python -m training.prepare.prepare
     deps:
-    - path: data/raw
+    - path: data/raw/tickets.csv
       hash: md5
-      md5: 4aca19add68c5aeabbd9af54ec49cb8b.dir
+      md5: a05aa13d753884547cc46e6f525bfb82
       size: 14568920
-      nfiles: 1
     - path: training/prepare/prepare.py
       hash: md5
-      md5: 965f85d5f5a8856bd423ea3c8d6103f7
-      size: 1786
+      md5: 24c1b5134d3b408564da166e46ee70b3
+      size: 1721
     outs:
-    - path: data/processed/test.csv
+    - path: data/processed/test.pkl
       hash: md5
-      md5: b10780ab822ba9ed295017f6f14d3095
-      size: 1487791
-    - path: data/processed/train.csv
+      md5: 38c0fedf654609fccd06a2849d3652cc
+      size: 2978144
+    - path: data/processed/train.pkl
       hash: md5
-      md5: 5a4c7687ef6ba7749c1442a5c0be94f0
-      size: 11632603
-    - path: data/processed/val.csv
+      md5: 238272639e7c6e1731a04035eb117257
+      size: 10651911
+    - path: data/processed/val.pkl
       hash: md5
-      md5: 19459424c33cc534ca9689e0994d5b3f
-      size: 1448192
+      md5: e715cabe1754b2a8a641c55c498fd916
+      size: 1147380
   train_tfidf:
     cmd: python -m training.tfidf.train
     deps:
-    - path: data/processed/train.csv
+    - path: data/processed/test.pkl
       hash: md5
-      md5: 5a4c7687ef6ba7749c1442a5c0be94f0
-      size: 11632603
-    - path: data/processed/val.csv
+      md5: 38c0fedf654609fccd06a2849d3652cc
+      size: 2978144
+    - path: data/processed/train.pkl
       hash: md5
-      md5: 19459424c33cc534ca9689e0994d5b3f
-      size: 1448192
+      md5: 238272639e7c6e1731a04035eb117257
+      size: 10651911
+    - path: data/processed/val.pkl
+      hash: md5
+      md5: e715cabe1754b2a8a641c55c498fd916
+      size: 1147380
     - path: models/__init__.py
       hash: md5
       md5: f69855f0ea1d7146dddda4d8eeb8b8a1
       size: 251
     - path: models/tfidf.py
       hash: md5
-      md5: 73a8b55e5c8310b0bf78bed6f6581302
-      size: 1483
+      md5: 74b4a0d8ad2bf53dc9a083a0faad8507
+      size: 406
     - path: training/tfidf/train.py
       hash: md5
-      md5: 615d3028bd0a62736fe12a2737cc7c05
-      size: 2456
+      md5: f756fc2b979b452d8e9eeadbd2d27940
+      size: 2292
     outs:
-    - path: artifacts/tfidf/classification_report_val.json
+    - path: artifacts/tfidf/classification_report.json
       hash: md5
-      md5: d0c6b8761a18eb04e9108584ffc93ec6
-      size: 1603
-    - path: artifacts/tfidf/labels.json
-      hash: md5
-      md5: 9cbe746682a4fe71b291d4232ccc2720
-      size: 148
+      md5: d0cb16cd77e0d656b9dba01683b3de70
+      size: 1624
     - path: artifacts/tfidf/model.joblib
       hash: md5
-      md5: 8eaa96bc4069fac0b28059f6fe1c71f5
-      size: 11692448
+      md5: bb56d753917707dae0b3a2fcd02ba7d4
+      size: 11693040
+  train_transformer:
+    cmd: python -m training.transformer.train
+    deps:
+    - path: data/processed/test.pkl
+      hash: md5
+      md5: 38c0fedf654609fccd06a2849d3652cc
+      size: 2978144
+    - path: data/processed/train.pkl
+      hash: md5
+      md5: 238272639e7c6e1731a04035eb117257
+      size: 10651911
+    - path: data/processed/val.pkl
+      hash: md5
+      md5: e715cabe1754b2a8a641c55c498fd916
+      size: 1147380
+    - path: models/__init__.py
+      hash: md5
+      md5: f69855f0ea1d7146dddda4d8eeb8b8a1
+      size: 251
+    - path: models/transformers.py
+      hash: md5
+      md5: f7842e1743a0dfd647260d7aba89fae0
+      size: 2146
+    - path: training/transformer/train.py
+      hash: md5
+      md5: c1bfdefb8ebedb5e1fc51e0c18e825b0
+      size: 4686
+    outs:
+    - path: artifacts/transformer
+      hash: md5
+      md5: c2b91ce826e1aa991ae2d5e368e07b33.dir
+      size: 1906661378
+      nfiles: 29

@@ -11,7 +11,6 @@ stages:
       - data/processed/val.pkl
       - data/processed/test.pkl
 
-stages:
   train_tfidf:
     cmd: python -m training.tfidf.train
     deps:
