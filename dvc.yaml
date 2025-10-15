@@ -1,18 +1,34 @@
 stages:
   prepare:
-    cmd: python training/prepare/prepare.py
+    cmd: python -m training.prepare.prepare
     deps:
-    - data/raw
-    - training/prepare/prepare.py
+      - data/raw
+      - training/prepare/prepare.py
     outs:
-    - data/processed/test.csv
-    - data/processed/train.csv
-    - data/processed/val.csv
+      - data/processed/train.csv
+      - data/processed/val.csv
+      - data/processed/test.csv
+
   train_tfidf:
-    cmd: .venv\Scripts\python.exe training/tfidf/train.py
+    cmd: python -m training.tfidf.train
     deps:
-    - data/processed/train.csv
-    - data/processed/val.csv
-    - training/tfidf/train.py
+      - data/processed/train.csv
+      - data/processed/val.csv
+      - training/tfidf/train.py
+      - models/tfidf.py
+      - models/__init__.py
     outs:
-    - artifacts/tfidf/model.joblib
+      - artifacts/tfidf/model.joblib
+      - artifacts/tfidf/labels.json
+      - artifacts/tfidf/classification_report_val.json
+
+  train_transformer:
+    cmd: python -m training.transformer.train
+    deps:
+      - data/processed/train.csv
+      - data/processed/val.csv
+      - training/transformer/train.py
+      - models/transformers.py
+      - models/__init__.py
+    outs:
+      - artifacts/transformer

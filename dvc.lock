@@ -1,7 +1,7 @@
 schema: '2.0'
 stages:
   prepare:
-    cmd: python training/prepare/prepare.py
+    cmd: python -m training.prepare.prepare
     deps:
     - path: data/raw
       hash: md5
@@ -10,8 +10,8 @@ stages:
       nfiles: 1
     - path: training/prepare/prepare.py
       hash: md5
-      md5: 70b3a99d8b6525e949b44a254df84be0
-      size: 1134
+      md5: 965f85d5f5a8856bd423ea3c8d6103f7
+      size: 1786
     outs:
     - path: data/processed/test.csv
       hash: md5
@@ -26,7 +26,7 @@ stages:
       md5: 19459424c33cc534ca9689e0994d5b3f
       size: 1448192
   train_tfidf:
-    cmd: .venv\Scripts\python.exe training/tfidf/train.py
+    cmd: python -m training.tfidf.train
     deps:
     - path: data/processed/train.csv
       hash: md5
@@ -36,12 +36,28 @@ stages:
       hash: md5
       md5: 19459424c33cc534ca9689e0994d5b3f
       size: 1448192
+    - path: models/__init__.py
+      hash: md5
+      md5: f69855f0ea1d7146dddda4d8eeb8b8a1
+      size: 251
+    - path: models/tfidf.py
+      hash: md5
+      md5: 73a8b55e5c8310b0bf78bed6f6581302
+      size: 1483
     - path: training/tfidf/train.py
       hash: md5
-      md5: c2d2324a5ba9652ba1b67fd084981c33
-      size: 3058
+      md5: 615d3028bd0a62736fe12a2737cc7c05
+      size: 2456
     outs:
+    - path: artifacts/tfidf/classification_report_val.json
+      hash: md5
+      md5: d0c6b8761a18eb04e9108584ffc93ec6
+      size: 1603
+    - path: artifacts/tfidf/labels.json
+      hash: md5
+      md5: 9cbe746682a4fe71b291d4232ccc2720
+      size: 148
     - path: artifacts/tfidf/model.joblib
       hash: md5
-      md5: 0d6a5a1de76551a005461bb478e501f8
-      size: 11692368
+      md5: 8eaa96bc4069fac0b28059f6fe1c71f5
+      size: 11692448
