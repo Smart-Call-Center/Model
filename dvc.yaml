@@ -4,8 +4,6 @@ stages:
     deps:
       - training/prepare/prepare.py
       - data/raw/tickets.csv
-      # If your prepare script reads the improved CSV instead, swap the line above
-      # - data/raw/all_tickets_processed_improved_v3.csv
     outs:
       - data/processed/train.pkl
       - data/processed/val.pkl
@@ -36,4 +34,4 @@ stages:
       - data/processed/val.pkl
       - data/processed/test.pkl
     outs:
-      - artifacts/transformer
+      - artifacts/transformer/needed_files

@@ -15,10 +15,19 @@ from transformers import (
     TrainingArguments,
 )
 
+# NEW
+import mlflow
+
 ARTIFACT_DIR = Path("artifacts/transformer"); ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
 MODEL_NAME = os.getenv("MODEL_NAME", "distilbert-base-multilingual-cased")  # FR/EN/AR friendly
+MLFLOW_EXPERIMENT_NAME = os.getenv("MLFLOW_EXPERIMENT_NAME", "CallCenterAI")
+MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "file:mlruns")   # local folder tracking (no server needed)
 
 def main():
+    # ---------- MLflow setup ----------
+    mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+    mlflow.set_experiment(MLFLOW_EXPERIMENT_NAME)
+
     # ---------- Load splits ----------
     train = pd.read_pickle("data/processed/train.pkl")
     val   = pd.read_pickle("data/processed/val.pkl")
@@ -36,7 +45,7 @@ def main():
     dvl = Dataset.from_pandas(encode(val),   preserve_index=False)
     dte = Dataset.from_pandas(encode(test),  preserve_index=False)
 
-    # ---------- Tokenizer & dynamic padding (pad_to_multiple_of=8 -> Tensor Cores) ----------
+    # ---------- Tokenizer & padding ----------
     tok = AutoTokenizer.from_pretrained(MODEL_NAME)
     collator = DataCollatorWithPadding(tokenizer=tok, pad_to_multiple_of=8)
 
@@ -50,8 +59,7 @@ def main():
     # ---------- GPU settings ----------
     use_cuda = torch.cuda.is_available()
     use_bf16 = use_cuda and torch.cuda.is_bf16_supported()
-    use_fp16 = use_cuda and not use_bf16  # fp16 if no bf16
-
+    use_fp16 = use_cuda and not use_bf16
     torch_dtype = torch.bfloat16 if use_bf16 else (torch.float16 if use_fp16 else torch.float32)
 
     # ---------- Model ----------
@@ -59,11 +67,10 @@ def main():
     model = AutoModelForSequenceClassification.from_pretrained(
         MODEL_NAME,
         num_labels=num_labels,
-        torch_dtype=torch_dtype,     # speed on GPU with mixed precision
+        torch_dtype=torch_dtype,
     )
 
-    # ---------- Training args (GPU-friendly defaults) ----------
-    # Tweak these via env vars if needed.
+    # ---------- Training args ----------
     args = TrainingArguments(
         output_dir=str(ARTIFACT_DIR / "runs"),
         num_train_epochs=int(os.getenv("EPOCHS", 2)),
@@ -78,20 +85,19 @@ def main():
         evaluation_strategy="epoch",
         save_strategy="epoch",
         logging_steps=int(os.getenv("LOG_STEPS", 50)),
-        report_to="none",  # set to "tensorboard" or "wandb" if you use them
 
-        # Mixed precision / device usage
+        # >>> THIS is the key line to make Trainer talk to MLflow
+        report_to="mlflow",
+        run_name=os.getenv("RUN_NAME", "transformer-distilmultilingual"),
+
+        # Mixed precision / perf
         bf16=use_bf16,
         fp16=use_fp16,
-
-        # Memory/perf improvements
         gradient_checkpointing=True,
         optim=os.getenv("OPTIM", "adamw_torch"),
         dataloader_num_workers=int(os.getenv("NUM_WORKERS", 2)),
         dataloader_pin_memory=True,
-        group_by_length=True,  # batches similar lengths together (fewer pads)
-
-        # PyTorch 2.x compile (optional; can speed up on some setups)
+        group_by_length=True,
         torch_compile=bool(int(os.getenv("TORCH_COMPILE", "0"))),
     )
 
@@ -101,25 +107,49 @@ def main():
         acc = (preds == labels).mean().item()
         return {"accuracy": float(acc)}
 
-    trainer = Trainer(
-        model=model,
-        args=args,
-        train_dataset=dtr,
-        eval_dataset=dvl,
-        tokenizer=tok,
-        data_collator=collator,
-        compute_metrics=compute_metrics,
-    )
+    # ---------- Training with MLflow run ----------
+    with mlflow.start_run(run_name=args.run_name):
+        # log a few params up-front
+        mlflow.log_params({
+            "model_name": MODEL_NAME,
+            "num_labels": num_labels,
+            "epochs": args.num_train_epochs,
+            "lr": args.learning_rate,
+            "train_bs": args.per_device_train_batch_size,
+            "eval_bs": args.per_device_eval_batch_size,
+            "fp16": args.fp16,
+            "bf16": args.bf16,
+        })
 
-    trainer.train()
+        trainer = Trainer(
+            model=model,
+            args=args,
+            train_dataset=dtr,
+            eval_dataset=dvl,
+            tokenizer=tok,
+            data_collator=collator,
+            compute_metrics=compute_metrics,
+        )
 
-    # ---------- Save for reuse (no retrain needed) ----------
-    model.save_pretrained(ARTIFACT_DIR)
-    tok.save_pretrained(ARTIFACT_DIR)
-    (ARTIFACT_DIR / "labels.txt").write_text("\n".join(le.classes_), encoding="utf-8")
+        trainer.train()
+        eval_val = trainer.evaluate(dvl)
+        mlflow.log_metrics({f"val_{k}": float(v) for k, v in eval_val.items() if isinstance(v, (int, float))})
 
-    print(f"GPU used: {use_cuda} | bf16={use_bf16} fp16={use_fp16}")
-    print(f"Saved HF model → {ARTIFACT_DIR}")
+        # Optional: evaluate on test and log
+        eval_test = trainer.evaluate(dte)
+        mlflow.log_metrics({f"test_{k}": float(v) for k, v in eval_test.items() if isinstance(v, (int, float))})
+
+        # ---------- Save small, reusable export ----------
+        # (Consider saving under artifacts/transformer/final and track only that in DVC)
+        model.save_pretrained(ARTIFACT_DIR)
+        tok.save_pretrained(ARTIFACT_DIR)
+        (ARTIFACT_DIR / "labels.txt").write_text("\n".join(le.classes_), encoding="utf-8")
+
+        # log the folder to MLflow so it appears under "Artifacts"
+        mlflow.log_artifacts(str(ARTIFACT_DIR), artifact_path="transformer")
+
+        print(f"GPU used: {use_cuda} | bf16={use_bf16} fp16={use_fp16}")
+        print(f"Saved HF model → {ARTIFACT_DIR}")
 
 if __name__ == "__main__":
     main()
