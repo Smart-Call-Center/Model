@@ -5,7 +5,7 @@ services:
     environment:
       - MODEL_PATH=/app/model/model.joblib
     volumes:
-      - ./artifacts/tfidf:/app/model:ro      # <<< HERE
+      - ./artifacts/tfidf:/app/model:ro     
     ports: ["8001:8001"]
 
   transformer_svc:
@@ -14,5 +14,5 @@ services:
     environment:
       - MODEL_DIR=/app/model
     volumes:
-      - ./artifacts/transformer:/app/model:ro # <<< HERE
+      - ./artifacts/transformer:/app/model:ro 
     ports: ["8002:8002"]
