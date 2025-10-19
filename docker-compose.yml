@@ -1,0 +1,18 @@
+services:
+  tfidf_svc:
+    build: ./services/tfidf_svc
+    image: mini-mlops/tfidf_svc:local
+    environment:
+      - MODEL_PATH=/app/model/model.joblib
+    volumes:
+      - ./artifacts/tfidf:/app/model:ro      # <<< HERE
+    ports: ["8001:8001"]
+
+  transformer_svc:
+    build: ./services/transformer_svc
+    image: mini-mlops/transformer_svc:local
+    environment:
+      - MODEL_DIR=/app/model
+    volumes:
+      - ./artifacts/transformer:/app/model:ro # <<< HERE
+    ports: ["8002:8002"]
