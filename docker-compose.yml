@@ -16,3 +16,9 @@ services:
     volumes:
       - ./artifacts/transformer:/app/model:ro 
     ports: ["8002:8002"]
+
+
+
+
+
+  

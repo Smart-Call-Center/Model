@@ -31,10 +31,8 @@ def load_model():
     # load trained artifact
     obj = joblib.load(MODEL_PATH)
 
-    # many trainers save the Pipeline directly -> use it
     clf = obj
 
-    # optional labels
     if os.path.exists(LABELS_PATH):
         with open(LABELS_PATH, "r", encoding="utf-8") as f:
             labels_json = json.load(f)
@@ -56,20 +54,16 @@ def predict(inp: Input):
     start = time.perf_counter()
     text = inp.text
 
-    # prefer calibrated probabilities if available
     if hasattr(clf, "predict_proba"):
         probs = clf.predict_proba([text])[0]
     else:
-        # fall back to decision_function + softmax
         if hasattr(clf, "decision_function"):
             scores = clf.decision_function([text])[0]
-            # binary margins may be scalar; normalize to vector
             scores = np.atleast_1d(scores)
             if scores.ndim == 0:
                 scores = np.array([1 - scores, scores])
             probs = _softmax(scores)
         else:
-            # final fallback: hard prediction -> fake one-hot
             pred = clf.predict([text])[0]
             n = len(labels) if labels else 1
             probs = np.zeros(n, dtype=np.float64)
@@ -77,7 +71,6 @@ def predict(inp: Input):
             idx = max(0, min(idx, n - 1))
             probs[idx] = 1.0
 
-    # build response
     if labels and len(labels) == len(probs):
         preds = [{"label": labels[i], "score": float(probs[i])} for i in range(len(probs))]
     else:
