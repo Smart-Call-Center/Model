@@ -17,8 +17,20 @@ services:
       - ./artifacts/transformer:/app/model:ro 
     ports: ["8002:8002"]
 
+  agent_svc:
+    build: ./services/agent_svc
+    image: mini-mlops/agent_svc:local
+    environment:
+      - TFIDF_URL=http://tfidf_svc:8001/predict
+      - TRANSFORMER_URL=http://transformer_svc:8002/predict
+    depends_on:
+      - tfidf_svc
+      - transformer_svc
+    ports:
+      - "8000:8000"
 
 
 
 
-  
+
+

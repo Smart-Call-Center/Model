@@ -34,4 +34,4 @@ stages:
       - data/processed/val.pkl
       - data/processed/test.pkl
     outs:
-      - artifacts/transformer/needed_files
+      - artifacts/transformer/needed

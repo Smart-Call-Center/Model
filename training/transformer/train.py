@@ -1,6 +1,7 @@
 # training/transformer/train.py
 from pathlib import Path
 import os
+
 import numpy as np
 import pandas as pd
 from datasets import Dataset
@@ -15,13 +16,18 @@ from transformers import (
     TrainingArguments,
 )
 
-# NEW
 import mlflow
 
-ARTIFACT_DIR = Path("artifacts/transformer"); ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
+# 👉 helper local pour bien sauver les labels dans la config HF
+from models.transformers import save_hf_artifacts
+
+ARTIFACT_DIR = Path("artifacts/transformer")
+ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
+
 MODEL_NAME = os.getenv("MODEL_NAME", "distilbert-base-multilingual-cased")  # FR/EN/AR friendly
 MLFLOW_EXPERIMENT_NAME = os.getenv("MLFLOW_EXPERIMENT_NAME", "CallCenterAI")
-MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "file:mlruns")   # local folder tracking (no server needed)
+MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "file:mlruns")   # local folder tracking
+
 
 def main():
     # ---------- MLflow setup ----------
@@ -86,11 +92,6 @@ def main():
         save_strategy="epoch",
         logging_steps=int(os.getenv("LOG_STEPS", 50)),
 
-        # >>> THIS is the key line to make Trainer talk to MLflow
-        report_to="mlflow",
-        run_name=os.getenv("RUN_NAME", "transformer-distilmultilingual"),
-
-        # Mixed precision / perf
         bf16=use_bf16,
         fp16=use_fp16,
         gradient_checkpointing=True,
@@ -109,7 +110,7 @@ def main():
 
     # ---------- Training with MLflow run ----------
     with mlflow.start_run(run_name=args.run_name):
-        # log a few params up-front
+        # log params
         mlflow.log_params({
             "model_name": MODEL_NAME,
             "num_labels": num_labels,
@@ -126,30 +127,41 @@ def main():
             args=args,
             train_dataset=dtr,
             eval_dataset=dvl,
-            tokenizer=tok,
             data_collator=collator,
             compute_metrics=compute_metrics,
         )
 
         trainer.train()
-        eval_val = trainer.evaluate(dvl)
-        mlflow.log_metrics({f"val_{k}": float(v) for k, v in eval_val.items() if isinstance(v, (int, float))})
 
-        # Optional: evaluate on test and log
-        eval_test = trainer.evaluate(dte)
-        mlflow.log_metrics({f"test_{k}": float(v) for k, v in eval_test.items() if isinstance(v, (int, float))})
+        # ---------- Eval ----------
+        eval_metrics = trainer.evaluate(eval_dataset=dte)
+        mlflow.log_metrics({f"test_{k}": float(v) for k, v in eval_metrics.items()})
 
-        # ---------- Save small, reusable export ----------
-        # (Consider saving under artifacts/transformer/final and track only that in DVC)
-        model.save_pretrained(ARTIFACT_DIR)
-        tok.save_pretrained(ARTIFACT_DIR)
-        (ARTIFACT_DIR / "labels.txt").write_text("\n".join(le.classes_), encoding="utf-8")
+        # ---------- Save small, reusable export avec vrais labels ----------
+        classes = list(le.classes_)
+        label2id = {label: int(i) for i, label in enumerate(classes)}
+        id2label = {int(i): label for i, label in enumerate(classes)}
 
-        # log the folder to MLflow so it appears under "Artifacts"
+        # met à jour model.config.label2id / id2label ET écrit labels.json
+        save_hf_artifacts(
+            model=model,
+            tokenizer=tok,
+            out_dir=ARTIFACT_DIR,
+            label2id=label2id,
+            id2label=id2label,
+        )
+
+        # optionnel : labels.txt simple
+        (ARTIFACT_DIR / "labels.txt").write_text(
+            "\n".join(classes), encoding="utf-8"
+        )
+
+        # log la version finale dans MLflow
         mlflow.log_artifacts(str(ARTIFACT_DIR), artifact_path="transformer")
 
         print(f"GPU used: {use_cuda} | bf16={use_bf16} fp16={use_fp16}")
         print(f"Saved HF model → {ARTIFACT_DIR}")
+
 
 if __name__ == "__main__":
     main()

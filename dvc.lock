@@ -41,8 +41,8 @@ stages:
       size: 1147380
     - path: models/__init__.py
       hash: md5
-      md5: f69855f0ea1d7146dddda4d8eeb8b8a1
-      size: 251
+      md5: bc7f86c22e8274e646a0e393eea7175f
+      size: 268
     - path: models/tfidf.py
       hash: md5
       md5: 74b4a0d8ad2bf53dc9a083a0faad8507
@@ -58,7 +58,7 @@ stages:
       size: 1624
     - path: artifacts/tfidf/model.joblib
       hash: md5
-      md5: f176d13c6094729554e024feabd7b888
+      md5: 8a9104a68652b1aaa72b5e2048d937f0
       size: 11693577
   train_transformer:
     cmd: python -m training.transformer.train
@@ -88,8 +88,8 @@ stages:
       md5: 8e5e4133998f994a9eef20ce994aaaee
       size: 5984
     outs:
-    - path: artifacts/transformer
+    - path: artifacts/transformer/needed
       hash: md5
-      md5: bc41e4c041f8348e21662689f56420b1.dir
-      size: 1906661467
-      nfiles: 29
+      md5: 48c1da5675116e1dbf7fd8d367492009.dir
+      size: 270675329
+      nfiles: 2
