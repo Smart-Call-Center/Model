@@ -10,5 +10,5 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     pip install --no-cache-dir -r /tmp/requirements.txt
 
 COPY main.py ./main.py
-EXPOSE 8002
-CMD ["uvicorn","main:app","--host","0.0.0.0","--port","8002"]
+EXPOSE 8082
+CMD ["uvicorn","main:app","--host","0.0.0.0","--port","8082"]

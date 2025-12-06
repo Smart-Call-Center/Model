@@ -1,36 +1,112 @@
 services:
   tfidf_svc:
     build: ./services/tfidf_svc
-    image: mini-mlops/tfidf_svc:local
+    container_name: tfidf_svc
     environment:
       - MODEL_PATH=/app/model/model.joblib
     volumes:
-      - ./artifacts/tfidf:/app/model:ro     
-    ports: ["8001:8001"]
+      - ./artifacts/tfidf:/app/model:ro
+    ports:
+      - "8081:8081"     
+    networks:
+      - monitoring_net
 
   transformer_svc:
     build: ./services/transformer_svc
-    image: mini-mlops/transformer_svc:local
+    container_name: transformer_svc
     environment:
       - MODEL_DIR=/app/model
     volumes:
-      - ./artifacts/transformer:/app/model:ro 
-    ports: ["8002:8002"]
+      - ./artifacts/transformer:/app/model:ro
+    ports:
+      - "8082:8082"      
+    networks:
+      - monitoring_net
 
   agent_svc:
     build: ./services/agent_svc
-    image: mini-mlops/agent_svc:local
+    container_name: agent_svc
     environment:
-      - TFIDF_URL=http://tfidf_svc:8001/predict
-      - TRANSFORMER_URL=http://transformer_svc:8002/predict
+      - TFIDF_URL=http://tfidf_svc:8081/predict
+      - TRANSFORMER_URL=http://transformer_svc:8082/predict
+      - AGENT_DOWNSTREAM_TIMEOUT=5.0
     depends_on:
       - tfidf_svc
       - transformer_svc
     ports:
-      - "8000:8000"
+      - "8080:8080"      
+    networks:
+      - monitoring_net
+
+
+  # mlflow, prometheus, grafana 
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:latest
+    container_name: mlflow
+    command: >
+      mlflow server
+        --host 0.0.0.0
+        --port 5000
+        --backend-store-uri file:///mlruns
+        --default-artifact-root /mlruns
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+    volumes:
+      - ./mlruns:/mlruns
+    ports:
+      - "5000:5000"
+    networks:
+      - monitoring_net
 
 
 
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus        # <-- AJOUT
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+    ports:
+      - "9090:9090"
+    depends_on:
+      - agent_svc
+      - tfidf_svc
+      - transformer_svc
+    networks:
+      - monitoring_net
 
+  
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      # volume Docker pour les données (dashboards, users, etc.)
+      - grafana-storage:/var/lib/grafana
+      # provisionning (tu peux les garder, ce sont juste des fichiers de config en lecture)
+      - ./monitoring/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+      - ./monitoring/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+    depends_on:
+      - prometheus
+    networks:
+      - monitoring_net
+
+
+networks:
+  monitoring_net:
+    driver: bridge
+
+volumes:
+  grafana-storage:
+  prometheus-data:
+  mlflow-db:
+  mlflow-artifacts:
 
 
